@@ -10,7 +10,7 @@ namespace SmartCharging.Api.Extensions
                 return Results.Created($"{uri}/{result.Value}", new { id = result.Value });
 
             return Results.Problem(
-            title: "Resource creation failed",
+            title: "Resource operation failed",
             detail: result.Error,
             statusCode: result.ErrorType switch
             {
@@ -28,7 +28,7 @@ namespace SmartCharging.Api.Extensions
                 return Results.NoContent();
 
             return Results.Problem(
-            title: "Resource creation failed",
+            title: "Resource operation failed",
             detail: result.Error,
             statusCode: result.ErrorType switch
             {

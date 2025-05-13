@@ -11,7 +11,7 @@ using SmartCharging.Api.Data;
 namespace SmartCharging.Api.Migrations
 {
     [DbContext(typeof(AppDbContext))]
-    [Migration("20250427213531_InitialCreate")]
+    [Migration("20250513120613_InitialCreate")]
     partial class InitialCreate
     {
         /// <inheritdoc />
