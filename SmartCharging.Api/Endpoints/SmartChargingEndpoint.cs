@@ -2,6 +2,7 @@
 using SmartCharging.Api.Dtos.ChargeStation;
 using SmartCharging.Api.Dtos.Connector;
 using SmartCharging.Api.Dtos.Group;
+using SmartCharging.Api.Dtos.Outgoing;
 using SmartCharging.Api.Extensions;
 using SmartCharging.Api.Services.ChargeStations;
 using SmartCharging.Api.Services.Connectors;
@@ -17,7 +18,7 @@ namespace SmartCharging.Api.Endpoints
             {
                 var result = await groupService.CreateGroupAsync(createGroup);
 
-                return result.ToApiResult<Guid>("/groups");
+                return result.ToApiResult("/groups", true);
             }).AddFluentValidationAutoValidation();
 
             builder.MapPut("/groups/{id}", async (Guid id, UpdateGroup updateGroup, IGroupService groupService) =>
@@ -26,10 +27,11 @@ namespace SmartCharging.Api.Endpoints
                 return result.ToApiResult();
             }).AddFluentValidationAutoValidation();
 
-            //builder.MapGet("/groups", (AppDbContext appDbContext) =>
-            //{
-            //    return appDbContext.Groups.Include(g => g.ChargeStations).ThenInclude(cs => cs.Connectors).ToList();
-            //});
+            builder.MapGet("/groups", async (IGroupService groupService) =>
+            {
+                var result = await groupService.GetGroupsAsync();
+                return result.ToApiResult("/groups");
+            });
 
             //Remove Group
             builder.MapDelete("/groups/{id}", async (Guid id, IGroupService groupService) =>
@@ -42,7 +44,7 @@ namespace SmartCharging.Api.Endpoints
             builder.MapPost("/chargestations", async (CreateChargeStation createChargeStation, IChargeStationService chargeStationService) =>
             {
                 var result = await chargeStationService.CreateChargeStationAsync(createChargeStation);
-                return result.ToApiResult<Guid>("/chargestations");
+                return result.ToApiResult("/chargestations", true);
             }).AddFluentValidationAutoValidation();
 
             //builder.MapGet("/chargestations", async (AppDbContext appDbContext) =>
@@ -71,7 +73,7 @@ namespace SmartCharging.Api.Endpoints
             builder.MapPost("/connectors", async (CreateConnector createConnector, IConnectorService connectorService, IServiceProvider serviceProvider) =>
             {
                 var result = await connectorService.CreateConnectorAsync(createConnector);
-                return result.ToApiResult<Guid>("/connectors");
+                return result.ToApiResult("/connectors", true);
             }).AddFluentValidationAutoValidation();
 
             //Update Connector

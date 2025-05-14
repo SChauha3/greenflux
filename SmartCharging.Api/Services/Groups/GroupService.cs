@@ -1,8 +1,11 @@
 ﻿using Microsoft.EntityFrameworkCore;
 using SmartCharging.Api.Dtos.Group;
+using SmartCharging.Api.Dtos.Outgoing;
 using SmartCharging.Api.Models;
 using SmartCharging.Api.Repositories;
 using System.Linq.Expressions;
+using System.Text.RegularExpressions;
+using Group = SmartCharging.Api.Models.Group;
 
 namespace SmartCharging.Api.Services.Groups
 {
@@ -62,6 +65,31 @@ namespace SmartCharging.Api.Services.Groups
 
             await _groupRepository.RemoveAsync(storedGroup);
             return Result.Success();
+        }
+
+        public async Task<Result<IEnumerable<CreatedGroup>>> GetGroupsAsync()
+        {
+            var groups = await _groupRepository.GetEntitiesAsync(q => q.Include(g => g.ChargeStations).ThenInclude(cs => cs.Connectors));
+
+            var createdGroups = groups.Select(g => new CreatedGroup
+            {
+                Id = g.Id,
+                Name = g.Name,
+                Capacity = g.Capacity,
+                ChargeStations = g.ChargeStations.Select(cs => new CreatedChargeStation
+                {
+                    Id = cs.Id,
+                    Name = cs.Name,
+                    Connectors = cs.Connectors.Select(c => new CreatedConnector
+                    {
+                        ChargeStationContextId = c.ChargeStationContextId,
+                        Id = c.Id,
+                        MaxCurrent = c.MaxCurrent,
+                    }).ToList()
+                }).ToList()
+            });
+
+            return Result<IEnumerable<CreatedGroup>>.Success(createdGroups);
         }
 
         private bool ValidateCapacity(Group storedGroup, UpdateGroup updatedGroup)

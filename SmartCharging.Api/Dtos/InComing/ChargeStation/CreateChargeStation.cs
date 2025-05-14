@@ -3,7 +3,7 @@
     public class CreateChargeStation
     {
         public string Name { get; set; } = string.Empty;
-        public string GroupId { get; set; }
+        public string GroupId { get; set; } = string.Empty;
         public List<CreateConnectorWithChargeStation> Connectors { get; set; } = new();
     }
 

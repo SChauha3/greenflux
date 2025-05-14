@@ -11,6 +11,6 @@ namespace SmartCharging.Api.Repositories
         Task RemoveAsync(T entity);
         Task SaveChangesAsync(T entity);
         Task UpdateChangesAsync(T entity);
+        Task<IEnumerable<T>> GetEntitiesAsync(Func<IQueryable<T>, IQueryable<T>> include);
     }
-
 }
