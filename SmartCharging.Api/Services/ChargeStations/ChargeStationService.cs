@@ -1,7 +1,6 @@
 ﻿using SmartCharging.Api.Dtos.ChargeStation;
 using SmartCharging.Api.Models;
 using SmartCharging.Api.Repositories;
-using System.Linq.Expressions;
 
 namespace SmartCharging.Api.Services.ChargeStations
 {
@@ -9,38 +8,31 @@ namespace SmartCharging.Api.Services.ChargeStations
     {
         private readonly IRepository<Group> _groupRepository;
         private readonly IRepository<ChargeStation> _chargeStationRepository;
-        private readonly IRepository<Connector> _connectorRepository;
 
         public ChargeStationService(
             IRepository<Group> groupRepository,
-            IRepository<ChargeStation> chargeStationRepository,
-            IRepository<Connector> connectorRepository)
+            IRepository<ChargeStation> chargeStationRepository)
         {
             _groupRepository = groupRepository;
             _chargeStationRepository = chargeStationRepository;
-            _connectorRepository = connectorRepository;
         }
 
         public async Task<Result<Guid>> CreateChargeStationAsync(CreateChargeStation createChargeStation)
         {
-            var groupId = Guid.Parse(createChargeStation.GroupId);
-            var storedGroup = await _groupRepository.FindAsync(groupId);
-            if (storedGroup == null)
+            var group = await _groupRepository.FindAsync(Guid.Parse(createChargeStation.GroupId));
+            
+            if (group == null)
                 return Result<Guid>.Fail("The specified group was not found, and charge station cannot be created without a valid group", ErrorType.NotFound);
 
             var id = Guid.NewGuid();
-            var connectors = MapConnectors(createChargeStation.Connectors, id);
+            var connectors = MapConnectorsDtoToEntity(createChargeStation.Connectors, id);
 
-            var chargeStation = new ChargeStation
-            {
-                GroupId = groupId,
-                Name = createChargeStation.Name,
-                Id = id,
-                Connectors = connectors
-            };
+            var chargeStation = ChargeStation.Create(id, createChargeStation.Name, connectors, group.Id);
 
-            storedGroup.Capacity += chargeStation.Connectors.Sum(mc => mc.MaxCurrent);
+            if (!group.CanAddChargeStation(chargeStation))
+                return Result<Guid>.Fail("Group capacity exceeded.", ErrorType.InValidCapacity);
 
+            group.ChargeStations.Add(chargeStation);
             await _chargeStationRepository.SaveChangesAsync(chargeStation);
 
             return Result<Guid>.Success(chargeStation.Id);
@@ -48,22 +40,17 @@ namespace SmartCharging.Api.Services.ChargeStations
 
         public async Task<Result> UpdateChargeStationAsync(Guid id, UpdateChargeStation updateChargeStation)
         {
-            Expression<Func<ChargeStation, bool>> condition = cs => cs.Id == id;
+            var chargeStation = await _chargeStationRepository.FindAsync(
+                cs => cs.Id == id, 
+                cs => cs.Connectors, 
+                cs => cs.Group);
 
-            var storedChargeStation = await _chargeStationRepository.FindAsync(condition, cs => cs.Connectors, cs => cs.Group);
-
-            if (storedChargeStation == null)
+            if (chargeStation == null)
                 return Result.Fail($"charge station with id {id} not found.", ErrorType.NotFound);
 
-            if (storedChargeStation.GroupId != Guid.Parse(updateChargeStation.GroupId))
-            {
-                storedChargeStation.Group.Capacity -= storedChargeStation.Connectors.Sum(c => c.MaxCurrent);
-                storedChargeStation.GroupId = Guid.Parse(updateChargeStation.GroupId);
-            }
-
-            storedChargeStation.Name = updateChargeStation.Name;
+            chargeStation.Update(updateChargeStation.Name);
             
-            await _chargeStationRepository.UpdateChangesAsync(storedChargeStation);
+            await _chargeStationRepository.UpdateChangesAsync(chargeStation);
 
             return Result.Success();
         }
@@ -78,18 +65,18 @@ namespace SmartCharging.Api.Services.ChargeStations
             return Result.Success();
         }
 
-        private ICollection<Connector> MapConnectors(List<CreateConnectorWithChargeStation> createConnectors, Guid id)
+        private ICollection<Connector> MapConnectorsDtoToEntity(List<CreateConnectorWithChargeStation> createConnectors, Guid id)
         {
             var connectors = new List<Connector>();
             foreach (var createConnector in createConnectors)
             {
-                connectors.Add(new Connector
-                {
-                    ChargeStationContextId = createConnector.ChargeStationContextId,
-                    MaxCurrent = createConnector.MaxCurrent,
-                    ChargeStationId = id,
-                });
+                connectors.Add(
+                    Connector.Create(
+                        createConnector.ChargeStationContextId,
+                        createConnector.MaxCurrent,
+                        id));
             }
+
             return connectors;
         }
     }

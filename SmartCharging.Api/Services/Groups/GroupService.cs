@@ -1,10 +1,7 @@
 ﻿using Microsoft.EntityFrameworkCore;
 using SmartCharging.Api.Dtos.Group;
 using SmartCharging.Api.Dtos.Outgoing;
-using SmartCharging.Api.Models;
 using SmartCharging.Api.Repositories;
-using System.Linq.Expressions;
-using System.Text.RegularExpressions;
 using Group = SmartCharging.Api.Models.Group;
 
 namespace SmartCharging.Api.Services.Groups
@@ -23,37 +20,23 @@ namespace SmartCharging.Api.Services.Groups
 
         public async Task<Result<Guid>> CreateGroupAsync(CreateGroup createGroup)
         {
-            var group = new Group
-            {
-                Capacity = createGroup.Capacity,
-                Name = createGroup.Name,
-                Id = Guid.NewGuid(),
-            };
-            
+            var group = Group.Create(createGroup.Name, createGroup.Capacity);
+
             await _groupRepository.SaveChangesAsync(group);
             return Result<Guid>.Success(group.Id);
         }
 
         public async Task<Result> UpdateGroupAsync(Guid id, UpdateGroup updateGroup)
         {
-            Expression<Func<Group, bool>> condition = g => g.Id == id;
+            var group = await GetGroupAsync(id);
 
-            var storedGroup = await _groupRepository.FindAsync(
-                condition,
-                query => query.Include(g => g.ChargeStations).ThenInclude(cs => cs.Connectors));
-
-            if (storedGroup == null)
+            if (group == null)
                 return Result.Fail($"Could not find group with Id {id}.", ErrorType.NotFound);
 
-            var isCapacityValid = ValidateCapacity(storedGroup, updateGroup);
+            if (!group.TryUpdate(updateGroup.Name, updateGroup.Capacity))
+                return Result.Fail("New capacity is less than total connector load.", ErrorType.InValidCapacity);
 
-            if (!isCapacityValid)
-                return Result.Fail(CapacityErrorMessage, ErrorType.InValidCapacity);
-
-            storedGroup.Name = updateGroup.Name;
-            storedGroup.Capacity = updateGroup.Capacity;
-
-            await _groupRepository.UpdateChangesAsync(storedGroup);
+            await _groupRepository.UpdateChangesAsync(group);
             return Result.Success();
         }
 
@@ -69,38 +52,37 @@ namespace SmartCharging.Api.Services.Groups
 
         public async Task<Result<IEnumerable<CreatedGroup>>> GetGroupsAsync()
         {
-            var groups = await _groupRepository.GetEntitiesAsync(q => q.Include(g => g.ChargeStations).ThenInclude(cs => cs.Connectors));
+            var groups = await _groupRepository.GetEntitiesAsync(
+                q => q.Include(g => g.ChargeStations).ThenInclude(cs => cs.Connectors));
 
-            var createdGroups = groups.Select(g => new CreatedGroup
-            {
-                Id = g.Id,
-                Name = g.Name,
-                Capacity = g.Capacity,
-                ChargeStations = g.ChargeStations.Select(cs => new CreatedChargeStation
-                {
-                    Id = cs.Id,
-                    Name = cs.Name,
-                    Connectors = cs.Connectors.Select(c => new CreatedConnector
-                    {
-                        ChargeStationContextId = c.ChargeStationContextId,
-                        Id = c.Id,
-                        MaxCurrent = c.MaxCurrent,
-                    }).ToList()
-                }).ToList()
-            });
+            var createdGroups = groups.Select(MapToCreatedGroup);
 
             return Result<IEnumerable<CreatedGroup>>.Success(createdGroups);
         }
 
-        private bool ValidateCapacity(Group storedGroup, UpdateGroup updatedGroup)
+        private static CreatedGroup MapToCreatedGroup(Group group) => new CreatedGroup
         {
-            var totalConnectorCapacity = storedGroup.ChargeStations
-                .SelectMany(g => g.Connectors)
-                .Sum(c => c.MaxCurrent);
+            Id = group.Id,
+            Name = group.Name,
+            Capacity = group.Capacity,
+            ChargeStations = group.ChargeStations.Select(cs => new CreatedChargeStation
+            {
+                Id = cs.Id,
+                Name = cs.Name,
+                Connectors = cs.Connectors.Select(c => new CreatedConnector
+                {
+                    ChargeStationContextId = c.ChargeStationContextId,
+                    Id = c.Id,
+                    MaxCurrent = c.MaxCurrent
+                }).ToList()
+            }).ToList()
+        };
 
-            if (updatedGroup.Capacity < totalConnectorCapacity)
-                return false;
-            return true;
-        }
+        private async Task<Group?> GetGroupAsync(Guid id) =>
+            await _groupRepository.FindAsync(
+                g => g.Id == id,
+                query => query
+                .Include(g => g.ChargeStations)
+                .ThenInclude(cs => cs.Connectors));
     }
 }

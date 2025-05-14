@@ -1,9 +1,6 @@
 ﻿using Microsoft.EntityFrameworkCore;
 using SmartCharging.Api.Data;
-using SmartCharging.Api.Models;
-using System;
 using System.Linq.Expressions;
-using System.Text.RegularExpressions;
 using Group = SmartCharging.Api.Models.Group;
 
 namespace SmartCharging.Api.Repositories
@@ -56,7 +53,6 @@ namespace SmartCharging.Api.Repositories
         public async Task SaveChangesAsync(T entity)
         {
             await _appDbContext.Set<T>().AddAsync(entity);
-            // Save changes to the database.
             await _appDbContext.SaveChangesAsync();
         }
 
@@ -64,7 +60,6 @@ namespace SmartCharging.Api.Repositories
         {
             var entry = _appDbContext.Set<T>().Entry(entity);
             entry.State = EntityState.Modified;
-            // Save changes to the database.
             await _appDbContext.SaveChangesAsync();
         }
 
@@ -74,7 +69,7 @@ namespace SmartCharging.Api.Repositories
             var query = _appDbContext.Set<T>().AsQueryable();
 
             if (include != null)
-                query = include(query); // Apply includes or filters
+                query = include(query);
 
             return await query.AsNoTracking().ToListAsync();
         }
