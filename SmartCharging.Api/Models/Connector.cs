@@ -13,6 +13,8 @@ namespace SmartCharging.Api.Models
         [JsonIgnore]
         public ChargeStation? ChargeStation { get; private set; }
 
+        protected Connector() { }
+
         private Connector(int chargeStationContextId, int maxCurrent, Guid chargeStationId)
         {
             if (maxCurrent <= 0)
@@ -35,7 +37,7 @@ namespace SmartCharging.Api.Models
             if (ChargeStation?.Group == null)
                 return false;
 
-            var currentTotal = ChargeStation.GetCurrentLoad();
+            var currentTotal = ChargeStation.Group.GetUsedCapacity();
             var proposedTotal = currentTotal - MaxCurrent + newMaxCurrent;
 
             return proposedTotal <= ChargeStation.Group.Capacity;

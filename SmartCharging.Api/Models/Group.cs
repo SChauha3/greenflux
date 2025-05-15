@@ -10,6 +10,8 @@ namespace SmartCharging.Api.Models
         public int Capacity { get; private set; }
         public ICollection<ChargeStation> ChargeStations { get; private set; } = new List<ChargeStation>();
 
+        protected Group() { }
+
         private Group(string name, int capacity)
         {
             Id = Guid.NewGuid();
@@ -58,7 +60,9 @@ namespace SmartCharging.Api.Models
             return true;
         }
 
-        public bool CanAcceptAdditionalCurrent(int additionalCurrent, int currentLoad) =>
-            currentLoad + additionalCurrent <= Capacity;
+        public bool CanAcceptAdditionalCurrent(int additionalCurrent)
+        {
+            return GetUsedCapacity() + additionalCurrent <= Capacity;
+        }
     }
 }

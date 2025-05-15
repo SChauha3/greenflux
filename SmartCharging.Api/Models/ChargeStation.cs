@@ -13,6 +13,8 @@ namespace SmartCharging.Api.Models
         [JsonIgnore]
         public Group? Group { get; set; }
 
+        protected ChargeStation() { }
+
         private ChargeStation(Guid id, string name, ICollection<Connector> connectors, Guid groupId) 
         {
             Id = id;
@@ -33,9 +35,9 @@ namespace SmartCharging.Api.Models
             Connectors.Sum(c => c.MaxCurrent);
 
         public bool CanAddConnector(int maxCurrent) =>
-            Group?.CanAcceptAdditionalCurrent(maxCurrent, GetCurrentLoad()) ?? false;
+            Group?.CanAcceptAdditionalCurrent(maxCurrent) ?? false;
 
-        public bool IsConnectorContextIdUnique(int chargeStationContextId) =>
+        public bool IsChargeStationContextIdUnique(int chargeStationContextId) =>
             !Connectors.Any(c => c.ChargeStationContextId == chargeStationContextId);
 
         public void AddConnector(Connector connector)

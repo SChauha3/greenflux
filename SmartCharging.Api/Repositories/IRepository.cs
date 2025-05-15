@@ -5,12 +5,11 @@ namespace SmartCharging.Api.Repositories
 {
     public interface IRepository<T>
     {
-        Task<T?> FindAsync(Guid id);
-        Task<T?> FindAsync(Expression<Func<T, bool>> predicate, params Expression<Func<T, object>>[] includes);
+        Task<T?> FindByIdAsync(Guid id);
         Task<T?> FindAsync(Expression<Func<T, bool>> predicate, Func<IQueryable<T>, IQueryable<T>>? includes = null);
-        Task RemoveAsync(T entity);
-        Task SaveChangesAsync(T entity);
-        Task UpdateChangesAsync(T entity);
-        Task<IEnumerable<T>> GetEntitiesAsync(Func<IQueryable<T>, IQueryable<T>> include);
+        Task<IEnumerable<T>> GetAsync(Func<IQueryable<T>, IQueryable<T>> include);
+        Task AddAsync(T entity);
+        Task UpdateAsync(T entity);
+        Task DeleteAsync(T entity);
     }
 }

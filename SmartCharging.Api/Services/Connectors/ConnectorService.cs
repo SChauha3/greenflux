@@ -21,19 +21,18 @@ namespace SmartCharging.Api.Services.Connectors
         public async Task<Result<Guid>> CreateConnectorAsync(CreateConnector createConnector)
         {
             var chargeStation = await _chargeStationRepository.FindAsync(
-                cs => cs.Id == Guid.Parse(createConnector.ChargeStationId), 
-                cs => cs.Connectors, 
-                cs => cs.Group);
+                cs => cs.Id == Guid.Parse(createConnector.ChargeStationId),
+                cs => cs.Include(c => c.Group).ThenInclude(cs => cs.ChargeStations).ThenInclude(cs => cs.Connectors));
 
             if (chargeStation == null)
                 return Result<Guid>.Fail("A Connector cannot exist in the domain without a Charge Station.", ErrorType.NotFound);
 
-            if (chargeStation.IsConnectorContextIdUnique(createConnector.ChargeStationContextId))
+            if (!chargeStation.IsChargeStationContextIdUnique(createConnector.ChargeStationContextId))
                 return Result<Guid>.Fail("Id must be unique within the context of a charge station with " +
                     "(possible range of values from 1 to 5)", ErrorType.UniqueConnector);
 
             if(!chargeStation.CanAddConnector(createConnector.MaxCurrent))
-                return Result<Guid>.Fail("Connector max current can not exceed group's capacity", ErrorType.UniqueConnector);
+                return Result<Guid>.Fail("Total connector max current would exceed group's capacity.", ErrorType.UniqueConnector);
             
             var connector = Connector.Create(
                 createConnector.ChargeStationContextId, 
@@ -42,7 +41,7 @@ namespace SmartCharging.Api.Services.Connectors
             
             chargeStation.AddConnector(connector);
 
-            await _connectorRepository.SaveChangesAsync(connector);
+            await _connectorRepository.AddAsync(connector);
             return Result<Guid>.Success(connector.Id);
         }
 
@@ -53,18 +52,18 @@ namespace SmartCharging.Api.Services.Connectors
                 query => query
                     .Include(c => c.ChargeStation)
                     .ThenInclude(cs => cs.Group)
-                    .Include(c => c.ChargeStation.Connectors));
+                    .ThenInclude(cs => cs.ChargeStations)
+                    .ThenInclude(c => c.Connectors));
 
             if (connector == null)
                 return Result.Fail($"A Connector with id {id} does not exist.", ErrorType.NotFound);
 
-            var canUpdate = connector.CanUpdateMaxCurrent(updateConnector.MaxCurrent);
-            if (!canUpdate)
-                return Result.Fail("Update would violate group capacity constraint.", ErrorType.InValidCapacity);
+            if (!connector.CanUpdateMaxCurrent(updateConnector.MaxCurrent))
+                return Result.Fail("Total connector max current would exceed group's capacity.", ErrorType.InValidCapacity);
 
             connector.UpdateMaxCurrent(updateConnector.MaxCurrent);
 
-            await _connectorRepository.UpdateChangesAsync(connector);
+            await _connectorRepository.UpdateAsync(connector);
             return Result.Success();
         }
 
@@ -85,7 +84,7 @@ namespace SmartCharging.Api.Services.Connectors
 
             connector.ChargeStation.RemoveConnector(connector);
 
-            await _connectorRepository.RemoveAsync(connector);
+            await _connectorRepository.DeleteAsync(connector);
             return Result.Success();
         }
     }

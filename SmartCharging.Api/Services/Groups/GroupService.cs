@@ -22,7 +22,7 @@ namespace SmartCharging.Api.Services.Groups
         {
             var group = Group.Create(createGroup.Name, createGroup.Capacity);
 
-            await _groupRepository.SaveChangesAsync(group);
+            await _groupRepository.AddAsync(group);
             return Result<Guid>.Success(group.Id);
         }
 
@@ -36,23 +36,23 @@ namespace SmartCharging.Api.Services.Groups
             if (!group.TryUpdate(updateGroup.Name, updateGroup.Capacity))
                 return Result.Fail("New capacity is less than total connector load.", ErrorType.InValidCapacity);
 
-            await _groupRepository.UpdateChangesAsync(group);
+            await _groupRepository.UpdateAsync(group);
             return Result.Success();
         }
 
         public async Task<Result> DeleteGroupAsync(Guid id)
         {
-            var storedGroup = await _groupRepository.FindAsync(id);
+            var storedGroup = await _groupRepository.FindByIdAsync(id);
             if (storedGroup == null)
                 return Result.Fail($"group not found with Group Id {id}", ErrorType.NotFound);
 
-            await _groupRepository.RemoveAsync(storedGroup);
+            await _groupRepository.DeleteAsync(storedGroup);
             return Result.Success();
         }
 
         public async Task<Result<IEnumerable<CreatedGroup>>> GetGroupsAsync()
         {
-            var groups = await _groupRepository.GetEntitiesAsync(
+            var groups = await _groupRepository.GetAsync(
                 q => q.Include(g => g.ChargeStations).ThenInclude(cs => cs.Connectors));
 
             var createdGroups = groups.Select(MapToCreatedGroup);
