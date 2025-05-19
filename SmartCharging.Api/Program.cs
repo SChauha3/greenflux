@@ -33,8 +33,11 @@ if (app.Environment.IsDevelopment())
     app.UseSwaggerUI();
 }
 
-app.UseHttpsRedirection();
+//app.UseHttpsRedirection();
 
 app.MapEndpoints();
+
+app.MapGet("/health/live", () => Results.Ok("Alive"));
+app.MapGet("/health/ready", () => Results.Ok("Ready"));
 
 app.Run();

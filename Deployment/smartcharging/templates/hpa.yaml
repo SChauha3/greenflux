@@ -2,14 +2,14 @@
 apiVersion: autoscaling/v2
 kind: HorizontalPodAutoscaler
 metadata:
-  name: {{ include "smart-charging-deployment.fullname" . }}
+  name: {{ include "smartcharging.fullname" . }}
   labels:
-    {{- include "smart-charging-deployment.labels" . | nindent 4 }}
+    {{- include "smartcharging.labels" . | nindent 4 }}
 spec:
   scaleTargetRef:
     apiVersion: apps/v1
     kind: Deployment
-    name: {{ include "smart-charging-deployment.fullname" . }}
+    name: {{ include "smartcharging.fullname" . }}
   minReplicas: {{ .Values.autoscaling.minReplicas }}
   maxReplicas: {{ .Values.autoscaling.maxReplicas }}
   metrics:

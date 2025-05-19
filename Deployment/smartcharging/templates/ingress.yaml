@@ -2,9 +2,9 @@
 apiVersion: networking.k8s.io/v1
 kind: Ingress
 metadata:
-  name: {{ include "smart-charging-deployment.fullname" . }}
+  name: {{ include "smartcharging.fullname" . }}
   labels:
-    {{- include "smart-charging-deployment.labels" . | nindent 4 }}
+    {{- include "smartcharging.labels" . | nindent 4 }}
   {{- with .Values.ingress.annotations }}
   annotations:
     {{- toYaml . | nindent 4 }}
@@ -35,7 +35,7 @@ spec:
             {{- end }}
             backend:
               service:
-                name: {{ include "smart-charging-deployment.fullname" $ }}
+                name: {{ include "smartcharging.fullname" $ }}
                 port:
                   number: {{ $.Values.service.port }}
           {{- end }}

@@ -1,16 +1,16 @@
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  name: {{ include "smart-charging-deployment.fullname" . }}
+  name: {{ include "smartcharging.fullname" . }}
   labels:
-    {{- include "smart-charging-deployment.labels" . | nindent 4 }}
+    {{- include "smartcharging.labels" . | nindent 4 }}
 spec:
   {{- if not .Values.autoscaling.enabled }}
   replicas: {{ .Values.replicaCount }}
   {{- end }}
   selector:
     matchLabels:
-      {{- include "smart-charging-deployment.selectorLabels" . | nindent 6 }}
+      {{- include "smartcharging.selectorLabels" . | nindent 6 }}
   template:
     metadata:
       {{- with .Values.podAnnotations }}
@@ -18,7 +18,7 @@ spec:
         {{- toYaml . | nindent 8 }}
       {{- end }}
       labels:
-        {{- include "smart-charging-deployment.labels" . | nindent 8 }}
+        {{- include "smartcharging.labels" . | nindent 8 }}
         {{- with .Values.podLabels }}
         {{- toYaml . | nindent 8 }}
         {{- end }}
@@ -27,7 +27,7 @@ spec:
       imagePullSecrets:
         {{- toYaml . | nindent 8 }}
       {{- end }}
-      serviceAccountName: {{ include "smart-charging-deployment.serviceAccountName" . }}
+      serviceAccountName: {{ include "smartcharging.serviceAccountName" . }}
       {{- with .Values.podSecurityContext }}
       securityContext:
         {{- toYaml . | nindent 8 }}
